@@ -1,5 +1,4 @@
 const db = require("../database/models/index");
-const { validationResult } = require("express-validator");
 const Admin = db.Admin;
 const Role = db.Role;
 const AdminRole = db.AdminRole;
@@ -62,10 +61,6 @@ const getAllAdmins = async (_req, res) => {
 };
 
 const createAdminRole = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).send({ errors: errors.array() });
-  }
   const t = await db.sequelize.transaction();
   try {
     const { name, email, password, phone, roleIds } = req.body;
@@ -116,7 +111,7 @@ const createAdminRole = async (req, res) => {
       ],
     });
 
-    // for activitylogs and response
+    // for response
     const responseData = {
       id: adminWithRoles.id,
       name: adminWithRoles.name,
@@ -220,10 +215,6 @@ const updateAdmin = async (req, res) => {
       msg: "Update process of this Admin is not allowed",
     });
   }
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).send({ errors: errors.array() });
-  }
   const t = await db.sequelize.transaction();
   try {
     const { name, email, password, phone, roleIds } = req.body;
@@ -253,25 +244,6 @@ const updateAdmin = async (req, res) => {
         ],
       });
     }
-
-    // for activitylogs
-    const originalData = {
-      id: admin.id,
-      name: admin.name,
-      email: admin.email,
-      phone: admin.phone,
-      createdAt: admin.createdAt,
-      roles: admin.Roles.map((role) => ({
-        id: role.id,
-        name: role.name,
-        description: role.description,
-        permissions: role.Permissions.map((permission) => ({
-          id: permission.id,
-          name: permission.name,
-          description: permission.description,
-        })),
-      })),
-    };
 
     // Update admin details
     await Admin.update(
@@ -388,25 +360,6 @@ const deleteAdmin = async (req, res) => {
         ],
       });
     }
-
-    // for activitylogs
-    const responseData = {
-      id: admin.id,
-      name: admin.name,
-      email: admin.email,
-      phone: admin.phone,
-      createdAt: admin.createdAt,
-      roles: admin.Roles.map((role) => ({
-        id: role.id,
-        name: role.name,
-        description: role.description,
-        permissions: role.Permissions.map((permission) => ({
-          id: permission.id,
-          name: permission.name,
-          description: permission.description,
-        })),
-      })),
-    };
 
     await AdminRole.destroy({ where: { adminId: id } }, { transaction: t });
     await admin.destroy({ transaction: t });

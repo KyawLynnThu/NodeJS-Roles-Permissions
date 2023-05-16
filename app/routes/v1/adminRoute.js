@@ -5,12 +5,12 @@ const router = require("express").Router();
 router
   .route("/")
   .get(adminroleController.getAllAdmins)
-  .post(adminrolesCreateRules, adminroleController.createAdminRole);
+  .post(adminroleController.createAdminRole);
 
 router
   .route("/:id")
   .get(adminroleController.getAdminDetails)
-  .put(adminrolesUpdateRules, adminroleController.updateAdmin)
+  .put(adminroleController.updateAdmin)
   .delete(adminroleController.deleteAdmin);
 
 module.exports = router;

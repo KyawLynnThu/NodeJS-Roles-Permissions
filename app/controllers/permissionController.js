@@ -1,6 +1,4 @@
-const db = require("../databases/db2/database/models");
-const { validationResult } = require("express-validator");
-const activitylogHelper = require("../helpers/activitylog");
+const db = require("../database/models");
 const Permission = db.Permission;
 
 const getAllPermissions = async (_req, res) => {
@@ -12,11 +10,6 @@ const getAllPermissions = async (_req, res) => {
 };
 
 const createPermission = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).send({ errors: errors.array() });
-  }
-
   const t = await db.sequelize.transaction();
   try {
     const existingPermission = await Permission.findOne({
@@ -38,19 +31,6 @@ const createPermission = async (req, res) => {
       description: req.body.description ? req.body.description : null,
     };
     const result = await Permission.create(permissionData, { transaction: t });
-
-    // Save ActivityLogs
-    activitylogHelper.saveActivityLog(
-      "PERMISSION",
-      result.id,
-      "CREATED",
-      null,
-      result,
-      req.headers.authUserId,
-      req,
-      req.clientIp,
-      { transaction: t }
-    );
 
     await t.commit();
     res.json({
@@ -87,11 +67,6 @@ const getPermissionDetails = async (req, res) => {
 };
 
 const updatePermission = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).send({ errors: errors.array() });
-  }
-
   const t = await db.sequelize.transaction();
   try {
     const updatedPermission = await Permission.findByPk(req.params.id);
@@ -105,12 +80,6 @@ const updatePermission = async (req, res) => {
         ],
       });
     }
-
-    // for activitylogs
-    const originalPermissionData = {
-      name: updatedPermission.name,
-      description: updatedPermission.description,
-    };
 
     const permission = await Permission.findOne({
       where: { name: req.body.name },
@@ -133,18 +102,6 @@ const updatePermission = async (req, res) => {
     const result = await updatedPermission.update(updatedPermissionData, {
       transaction: t,
     });
-    // Save ActivityLogs
-    activitylogHelper.saveActivityLog(
-      "PERMISSION",
-      result.id,
-      "UPDATED",
-      originalPermissionData,
-      updatedPermissionData,
-      req.headers.authUserId,
-      req,
-      req.clientIp,
-      { transaction: t }
-    );
 
     await t.commit();
     res.json({
@@ -178,26 +135,7 @@ const deletePermission = async (req, res) => {
 
   const t = await db.sequelize.transaction();
   try {
-    // for activitylogs
-    const originalPermissionData = {
-      name: findPermission.name,
-      description: findPermission.description,
-    };
-
     await Permission.destroy({ where: { id: id } }, { transaction: t });
-
-    // Save ActivityLogs
-    activitylogHelper.saveActivityLog(
-      "PERMISSION",
-      id,
-      "DELETED",
-      originalPermissionData,
-      null,
-      req.headers.authUserId,
-      req,
-      req.clientIp,
-      { transaction: t }
-    );
     await t.commit();
     res.json({
       status: true,
@@ -217,5 +155,5 @@ module.exports = {
   createPermission,
   getPermissionDetails,
   updatePermission,
-  deletePermission
+  deletePermission,
 };

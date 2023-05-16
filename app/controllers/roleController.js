@@ -1,7 +1,5 @@
-const db = require("../databases/db2/database/models");
-const { validationResult } = require("express-validator");
+const db = require("../database/models");
 const { Op } = require("sequelize");
-const activitylogHelper = require("../helpers/activitylog");
 const Role = db.Role;
 const RolePermission = db.RolePermission;
 const Permission = db.Permission;
@@ -40,11 +38,6 @@ const getAllRoles = async (_req, res) => {
 };
 
 const createRole = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).send({ errors: errors.array() });
-  }
-
   const t = await db.sequelize.transaction();
   try {
     const { name, description, permissionIds } = req.body;
@@ -87,19 +80,6 @@ const createRole = async (req, res) => {
         },
       })),
     };
-
-    // Save ActivityLogs
-    activitylogHelper.saveActivityLog(
-      "PERMISSION",
-      responseData.id,
-      "CREATED",
-      null,
-      responseData,
-      req.headers.authUserId,
-      req,
-      req.clientIp
-    );
-
     res.status(200).send({
       msg: "Role created successfully",
       data: responseData,
@@ -167,10 +147,6 @@ const getRoleDetails = async (req, res) => {
 
 const updateRole = async (req, res) => {
   const roleId = req.params.id;
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).send({ errors: errors.array() });
-  }
   const t = await db.sequelize.transaction();
   try {
     const { name, description, permissionIds } = req.body;
@@ -197,25 +173,6 @@ const updateRole = async (req, res) => {
         ],
       });
     }
-
-    // for activitylogs
-    const permissions = role.Permissions.map((permission) => ({
-      roleId: role.id,
-      permissionId: permission.id,
-      permission: {
-        id: permission.id,
-        name: permission.name,
-        description: permission.description,
-      },
-    }));
-
-    // for activitylogs
-    const originalRoleData = {
-      id: role.id,
-      name: role.name,
-      description: role.description,
-      permissions,
-    };
 
     await role.update(
       {
@@ -259,18 +216,6 @@ const updateRole = async (req, res) => {
       })),
     };
 
-    // Save ActivityLogs
-    activitylogHelper.saveActivityLog(
-      "PERMISSION",
-      responseData.id,
-      "UPDATED",
-      originalRoleData,
-      responseData,
-      req.headers.authUserId,
-      req,
-      req.clientIp
-    );
-
     res.status(200).send({
       status: true,
       msg: "Role updated successfully",
@@ -312,38 +257,10 @@ const deleteRole = async (req, res) => {
       });
     }
 
-    const permissions = role.Permissions.map((permission) => ({
-      roleId: role.id,
-      permissionId: permission.id,
-      permission: {
-        id: permission.id,
-        name: permission.name,
-        description: permission.description,
-      },
-    }));
-
-    const originalRoleData = {
-      id: role.id,
-      name: role.name,
-      description: role.description,
-      permissions,
-    };
-
     await RolePermission.destroy({ where: { roleId } }, { transaction: t });
     await role.destroy({ transaction: t });
     await t.commit();
 
-    // Save ActivityLogs
-    activitylogHelper.saveActivityLog(
-      "PERMISSION",
-      roleId,
-      "DELETED",
-      originalRoleData,
-      null,
-      req.headers.authUserId,
-      req,
-      req.clientIp
-    );
     res.status(200).send({
       status: true,
       msg: "Role deleted successfully",
